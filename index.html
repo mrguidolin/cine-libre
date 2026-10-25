@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12141c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ciné Libre">
+<meta name="description" content="Films, séries et TV en direct, gratuits et légaux en Suisse, en français et en italien.">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="manifest" href="manifest.webmanifest">
+<style>
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;font-size:14px;-webkit-text-size-adjust:100%}
+img{max-width:100%}
+[hidden]{display:none!important}
+</style>
+<title>Ciné Libre</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Figtree:wght@400;500;700&display=swap">
+<style>
+/* Layout: salle de cinéma — en-tête avec bouton Mettre à jour, filtres, grille d'affiches, fiche en tiroir */
+:root{
+  --bg:#12141c; --panel:#1b1e29; --panel2:#232736; --line:#2b2f3e; --fg:#ecebe6; --muted:#9a9cab;
+  --amber:#f3b23c; --amberInk:#1a1406; --star:#f5c518; --ok:#5fc48a; --warn:#f08a5d;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Figtree",system-ui,-apple-system,sans-serif;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--body);font-size:15px;line-height:1.45;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 40px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:1100px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:12px 10px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{font-family:var(--display);font-weight:800;font-size:32px;letter-spacing:.02em;margin:0;text-transform:uppercase;line-height:1}
+h1 span{color:var(--amber)}
+.upd{display:flex;align-items:center;gap:8px;background:var(--amber);color:var(--amberInk);border:0;border-radius:12px;padding:11px 16px;font:inherit;font-weight:800;font-size:15px;cursor:pointer;box-shadow:0 0 0 3px rgb(243 178 60 / .25)}
+.upd:disabled{opacity:.7;cursor:default}
+.upd svg{width:18px;height:18px}
+.upd.spin svg{animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.status{font-size:12.5px;color:var(--muted);display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--ok);flex:none}
+.dot.run{background:var(--amber)}.dot.err{background:var(--warn)}
+.search{display:flex;gap:8px}
+.sortw{flex:none;display:flex;align-items:center;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:0 4px 0 10px;font-size:12px;color:var(--muted)}
+.sortw select{background:transparent;color:var(--fg);border:0;font:inherit;font-size:14px;font-weight:600;padding:10px 4px;max-width:120px}
+.sortw:focus-within{outline:2px solid var(--amber);outline-offset:1px}
+.ghead{grid-column:1/-1;font-family:var(--display);font-size:22px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;margin-top:8px;border-bottom:1px solid var(--line);padding-bottom:4px;display:flex;justify-content:space-between;align-items:baseline}
+.ghead small{font-family:var(--body);font-size:12px;color:var(--muted);letter-spacing:0;text-transform:none}
+.search input{flex:1;min-width:0;width:100%;box-sizing:border-box;background:var(--panel);border:1px solid var(--line);color:var(--fg);border-radius:10px;padding:11px 14px;font:inherit}
+.search input:focus{outline:2px solid var(--amber);outline-offset:1px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;background:transparent;border:1px solid var(--line);color:var(--fg);border-radius:999px;padding:6px 12px;font:inherit;font-size:13px;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--fg);border-color:var(--fg);color:var(--bg);font-weight:700}
+.chip.src{font-size:12.5px;padding:5px 11px}
+.chip.src[aria-pressed="true"]{background:var(--amber);border-color:var(--amber);color:var(--amberInk)}
+.chip:focus-visible,.card:focus-visible,.btn:focus-visible,.upd:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+h2{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.06em;text-transform:uppercase;margin:0;color:var(--muted)}
+.row-scroll{display:flex;gap:12px;overflow-x:auto;padding-bottom:4px}
+.row-scroll .card{width:130px;flex:none}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:16px 12px}
+@media(max-width:420px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.card{background:none;border:0;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-width:0}
+.poster{position:relative;aspect-ratio:2/3;max-width:100%;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;padding:12px;box-shadow:0 6px 18px rgb(0 0 0 / .35);transition:transform .15s}
+.card:hover .poster{transform:translateY(-3px)}
+.poster .pt{font-family:var(--display);font-weight:800;text-transform:uppercase;line-height:.95;font-size:clamp(19px,5.2vw,26px);color:#fff;text-wrap:balance;text-shadow:0 2px 10px rgb(0 0 0 / .4);overflow-wrap:break-word;hyphens:auto;-webkit-hyphens:auto}
+.poster .py{font-size:12px;color:rgb(255 255 255 / .8);margin-top:4px;letter-spacing:.08em}
+.poster .src{position:absolute;top:8px;left:8px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgb(0 0 0 / .55);color:#fff;padding:3px 7px;border-radius:4px}
+.poster .vlc{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:800;background:#ff8800;color:#000;padding:3px 6px;border-radius:4px}
+.poster .bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--amber)}
+.meta{display:flex;justify-content:space-between;gap:6px;font-size:13px;min-width:0}
+.meta .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
+.imdb{flex:none;display:inline-flex;align-items:center;gap:4px;font-variant-numeric:tabular-nums;font-weight:700}
+.imdb i{font-style:normal;background:var(--star);color:#000;font-size:9.5px;font-weight:800;padding:1px 3px;border-radius:2px}
+.sub{color:var(--muted);font-size:12px;margin-top:-4px}
+.dur{color:var(--fg);font-variant-numeric:tabular-nums;font-weight:600}
+.empty{color:var(--muted);padding:20px 0}
+.btns{display:flex;flex-wrap:wrap;gap:8px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;border-radius:10px;padding:11px 14px;font-weight:700;font-size:14px;border:1px solid var(--line);color:var(--fg);background:var(--panel2);cursor:pointer;font-family:inherit}
+.btn.main{background:var(--amber);color:var(--amberInk);border-color:var(--amber);font-size:16px;padding:14px}
+.btn.vlcb{background:#ff8800;border-color:#ff8800;color:#111;font-size:16px;padding:14px}
+.sheetBg{position:fixed;inset:0;background:rgb(0 0 0 / .6);z-index:20}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:21;background:var(--panel);border-radius:18px 18px 0 0;max-height:88%;overflow:auto;padding:22px max(16px,env(safe-area-inset-right,0px)) calc(24px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border-top:1px solid var(--line)}
+.sheet .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:110px minmax(0,1fr);gap:16px}
+.sheet .poster{padding:8px}.sheet .poster .pt{font-size:18px}
+.sheet h3{font-family:var(--display);font-size:28px;line-height:1;margin:0 0 6px;text-transform:uppercase;text-wrap:balance;padding-right:28px}
+.sheet .row{grid-column:1/-1;display:flex;flex-direction:column;gap:10px}
+.sheet .desc{margin:8px 0 0}
+.close{position:absolute;top:10px;right:max(12px,env(safe-area-inset-right,0px));background:none;border:0;color:var(--muted);font-size:28px;cursor:pointer}
+.note{color:var(--muted);font-size:12.5px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(20px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:30;max-width:90%}
+.plat{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.pc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.pc .h{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.pc b{font-family:var(--display);font-size:20px;letter-spacing:.03em}
+.pill{font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.pill.rec{background:rgb(95 196 138 / .18);color:var(--ok)}
+.pill.lim{background:rgb(243 178 60 / .18);color:var(--amber)}
+.pill.no{background:rgb(240 138 93 / .18);color:var(--warn)}
+.pc a{color:var(--amber);font-size:13px;font-weight:600}
+.chgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:10px}
+.chan{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.chanmain{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--fg);min-width:0}
+.chlogo{flex:none;width:64px;height:48px;border-radius:8px;display:flex;align-items:center;justify-content:center;text-align:center;font-family:var(--display);font-weight:800;font-size:13px;line-height:1;color:#fff;text-transform:uppercase;padding:4px;box-sizing:border-box;overflow:hidden}
+.chmeta{display:flex;flex-direction:column;gap:1px;min-width:0;flex:1}
+.chmeta b{font-size:15px}
+.play{flex:none;width:36px;height:36px;border-radius:50%;background:var(--amber);color:var(--amberInk);display:flex;align-items:center;justify-content:center;font-size:14px}
+footer{color:var(--muted);font-size:12px;max-width:65ch}
+@media(prefers-reduced-motion:reduce){.poster{transition:none}.upd.spin svg{animation:none}}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header>
+  <div class="brand">
+    <h1>Ciné<span>Libre</span></h1>
+    <button class="upd" id="upd" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg><span id="updLabel">Mettre à jour</span></button>
+  </div>
+  <div class="status" id="status"><span class="dot run"></span>Chargement du catalogue…</div>
+  <div class="search"><input id="q" type="search" placeholder="Chercher un film, une série, un réalisateur…" autocomplete="off">
+    <label class="sortw" for="sort"><span>Trier</span><select id="sort">
+      <option value="rating">Note IMDb</option><option value="az">A → Z</option><option value="genre">Par genre</option><option value="short">Plus courts</option><option value="long">Plus longs</option><option value="year">Plus récents</option><option value="old">Plus anciens</option>
+    </select></label></div>
+  <div class="chips" id="filters"></div>
+  <div class="chips" id="srcFilters" aria-label="Source"></div>
+</header>
+
+<section id="resumeSec" hidden style="display:flex;flex-direction:column;gap:10px">
+  <h2>Reprendre</h2>
+  <div class="row-scroll" id="resume"></div>
+</section>
+
+<section id="catSec" style="display:flex;flex-direction:column;gap:12px">
+  <h2 id="gridTitle">Catalogue</h2>
+  <div class="grid" id="grid"><div class="empty">Le catalogue arrive… S'il reste vide, touche « Mettre à jour ».</div></div>
+</section>
+
+<section id="liveSec" hidden style="display:flex;flex-direction:column;gap:14px">
+  <div id="live"></div>
+</section>
+
+<section id="libSec" hidden style="display:flex;flex-direction:column;gap:12px">
+  <h2>Bibliothèques avec films en streaming</h2>
+  <p class="note" style="margin:0;max-width:65ch">Avec une carte de lecteur gratuite, ces bibliothèques donnent accès à des milliers de films en plus. Les mieux adaptées à un habitant de Genève sont en premier.</p>
+  <div class="plat" id="lib"></div>
+</section>
+
+<section id="platSec" hidden style="display:flex;flex-direction:column;gap:12px">
+  <h2>Les plateformes, analysées</h2>
+  <div class="plat" id="plat"></div>
+</section>
+
+<footer id="foot">Uniquement des titres gratuits et légaux. Badge <b style="color:#ff8800">VLC</b> : le film s'ouvre directement dans VLC, qui reprend là où tu t'étais arrêté. Les autres s'ouvrent dans l'app de la plateforme (compte gratuit pour Play Suisse et RTS Play). Les notes IMDb sont indicatives.</footer>
+</div>
+
+<div class="sheetBg" id="sheetBg" hidden></div>
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
+
+<script>
+const P_LABEL={archive:"Gratuit · VLC",playsuisse:"Play Suisse",rts:"RTS Play",rsi:"RSI Play",srf:"SRF Play",arte:"Arte",tv5:"TV5MONDEplus",pluto:"Pluto TV",rakuten:"Rakuten TV",youtube:"YouTube",memobase:"Memobase",francetv:"France.tv",henri:"Henri",onf:"ONF",raiplay:"RaiPlay",la7:"La7",mediaset:"Mediaset Infinity",lumni:"Lumni",auvio:"Auvio"};
+const FILTERS=[["all","Tout"],["live","TV en direct"],["fav","★ Favoris"],["fr","Français"],["it","Italiano"],["vlc","Direct VLC"],["film","Films"],["serie","Séries"],["suisse","Suisse"],["top","Mieux notés"],["new","Nouveautés"],["lib","Bibliothèques"],["plat","Plateformes"]];
+const SWISS_P=new Set(["playsuisse","rts","rsi","srf","memobase"]);
+
+let items=[], sources=[], libs=[], live=[], catUpdated=null, status={}, filter="all";
+let me={favs:[],prog:{}}, meRef=null, db=null, mcp=null;
+try{const s=JSON.parse(localStorage.getItem("cl_me")||"null");if(s)me=s}catch(e){}
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const norm=s=>String(s||"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
+const enc=encodeURIComponent;
+const keyOf=it=>norm(it.t).replace(/[^a-z0-9]+/g,"-")+"-"+(it.y||"");
+function toast(m){const t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),3200)}
+function ago(ts){if(!ts)return"jamais";const d=(Date.now()-new Date(ts).getTime())/1000;if(d<90)return"à l'instant";if(d<3600)return`il y a ${Math.round(d/60)} min`;if(d<86400)return`il y a ${Math.round(d/3600)} h`;const j=Math.round(d/86400);return`il y a ${j} jour${j>1?"s":""}`}
+
+function hue(s){let h=0;for(const c of String(s))h=(h*31+c.charCodeAt(0))%360;return h}
+function posterStyle(it){
+  const h=hue(it.t);
+  if(it.y&&it.y<1945)return `background:linear-gradient(160deg,hsl(${h%40+20} 18% 36%),hsl(30 10% 9%))`;
+  return `background:radial-gradient(120% 80% at 20% 10%,hsl(${h} 65% 52%),transparent 60%),linear-gradient(170deg,hsl(${(h+40)%360} 55% 30%),hsl(${(h+80)%360} 45% 10%))`;
+}
+
+/* VLC */
+const ua=navigator.userAgent;
+const isIOS=/iPhone|iPad|iPod/.test(ua)||(/Macintosh/.test(ua)&&navigator.maxTouchPoints>1);
+const isAndroid=/Android/.test(ua);
+function vlcLink(file){
+  if(isIOS)return`vlc-x-callback://x-callback-url/stream?url=${enc(file)}`;
+  if(isAndroid)return`intent://${file.replace(/^https?:\/\//,"")}#Intent;scheme=https;package=org.videolan.vlc;type=video/*;end`;
+  return`vlc://${file}`;
+}
+/* Liens vers la plateforme elle-même (jamais via un moteur de recherche).
+   Une adresse https de la plateforme ouvre son app si elle est installée. */
+const PLAT_HOME={playsuisse:"https://www.playsuisse.ch/fr",rts:"https://www.rts.ch/play/tv",rsi:"https://www.rsi.ch/play/tv",srf:"https://www.srf.ch/play/tv",arte:"https://www.arte.tv/fr/",tv5:"https://www.tv5mondeplus.com",archive:"https://archive.org",henri:"https://www.cinematheque.fr/henri/",onf:"https://www.onf.ca",raiplay:"https://www.raiplay.it",la7:"https://www.la7.it",mediaset:"https://mediasetinfinity.mediaset.it"};
+const PLAT_SEARCH={arte:q=>`https://www.arte.tv/fr/search/?q=${q}`,archive:q=>`https://archive.org/search?query=${q}`};
+function platSearch(it,p){
+  const q=enc(it.t);
+  if(PLAT_SEARCH[p])return PLAT_SEARCH[p](q);
+  return PLAT_HOME[p]||"#";
+}
+async function copyText(s){try{await navigator.clipboard.writeText(s);return true}catch(e){return false}}
+
+/* Per-viewer state */
+let saveT=null;
+function saveMe(){
+  try{localStorage.setItem("cl_me",JSON.stringify(me))}catch(e){}
+  if(!meRef)return;
+  clearTimeout(saveT);saveT=setTimeout(()=>{meRef.set({favs:me.favs,prog:me.prog}).catch(()=>{})},600);
+}
+const isFav=k=>me.favs.includes(k);
+function toggleFav(k){me.favs=isFav(k)?me.favs.filter(x=>x!==k):[...me.favs,k];saveMe();render()}
+function markStarted(k){me.prog[k]={at:new Date().toISOString(),done:false};saveMe();render()}
+function markDone(k){if(me.prog[k])me.prog[k].done=true;saveMe();render()}
+
+/* Rendering */
+function renderFilters(){$("filters").innerHTML=FILTERS.map(([k,n])=>`<button class="chip" data-f="${k}" aria-pressed="${k===filter}">${n}</button>`).join("")}
+let srcFilter="all";
+const SRC_NAME=p=>p==="archive"?"Internet Archive":(P_LABEL[p]||p);
+function renderSrcFilters(){
+  const counts={};for(const it of items)counts[it.p]=(counts[it.p]||0)+1;
+  const ps=Object.keys(counts).sort((a,b)=>counts[b]-counts[a]);
+  if(srcFilter!=="all"&&!counts[srcFilter])srcFilter="all";
+  $("srcFilters").hidden=["plat","lib","live"].includes(filter)||ps.length<2;
+  $("srcFilters").innerHTML=`<button class="chip src" data-s="all" aria-pressed="${srcFilter==="all"}">Toutes les sources</button>`+
+    ps.map(p=>`<button class="chip src" data-s="${esc(p)}" aria-pressed="${p===srcFilter}">${esc(SRC_NAME(p))} · ${counts[p]}</button>`).join("");
+}
+/* Durée en minutes, pour trier : "1 h 42" → 102, "52 min" → 52, "8 × 45 min" → 45 (par épisode) */
+function mins(it){
+  const d=String(it.dur||""); if(!d)return null;
+  const ep=d.match(/×\s*(\d+)\s*min/); if(ep)return +ep[1];
+  const h=d.match(/(\d+)\s*h\s*(\d+)?/); if(h)return (+h[1])*60+(+(h[2]||0));
+  const m=d.match(/(\d+)\s*min/); return m?+m[1]:null;
+}
+function card(it){
+  const k=keyOf(it), pr=me.prog[k];
+  return `<button class="card" data-k="${esc(k)}" aria-label="${esc(it.t)}">
+    <div class="poster" style="${posterStyle(it)}"><span class="src">${esc(P_LABEL[it.p]||it.p)}</span>${it.file?'<span class="vlc">VLC</span>':""}
+      <div class="pt">${esc(it.t)}</div><div class="py">${it.y||""} · ${it.k==="serie"?"SÉRIE":"FILM"}${isFav(k)?" · ★":""}</div>${pr&&!pr.done?'<span class="bar"></span>':""}</div>
+    <div class="meta"><span class="t">${esc(it.t)}</span>${it.r?`<span class="imdb"><i>IMDb</i>${Number(it.r).toFixed(1)}</span>`:""}</div>
+    <div class="sub">${it.dur?`<span class="dur">${esc(it.dur)}</span> · `:""}${esc(String(it.g||"").replace(/·/g," · "))}</div></button>`;
+}
+function renderStatus(){
+  const s=$("status"), st=status.state;
+  const running=st==="running"&&status.requestedAt&&(Date.now()-new Date(status.requestedAt))<45*60e3;
+  $("upd").disabled=running; $("upd").classList.toggle("spin",running);
+  $("updLabel").textContent=running?"Mise à jour…":"Mettre à jour";
+  if(!items.length&&!catUpdated){s.innerHTML=`<span class="dot run"></span>Chargement du catalogue…`;return}
+  if(running){s.innerHTML=`<span class="dot run"></span>Recherche des nouveautés en cours (10–20 min). Le catalogue se rafraîchira tout seul.`;return}
+  if(status.state==="error"){s.innerHTML=`<span class="dot err"></span>Dernière mise à jour échouée : ${esc(status.message||"")} · ${items.length} titres`;return}
+  s.innerHTML=`<span class="dot"></span>${items.length} titres gratuits · mis à jour ${ago(catUpdated)}${status.message?` · ${esc(status.message)}`:""}`;
+}
+function render(){
+  renderStatus();
+  const plat=filter==="plat", lib=filter==="lib", lv=filter==="live";
+  $("platSec").hidden=!plat; $("libSec").hidden=!lib; $("liveSec").hidden=!lv; $("catSec").hidden=plat||lib||lv; $("resumeSec").hidden=true;
+  renderSrcFilters();
+  if(plat){renderPlat();return}
+  if(lib){renderLib();return}
+  if(lv){renderLive();return}
+  // Reprendre
+  const started=items.filter(it=>{const p=me.prog[keyOf(it)];return p&&!p.done}).sort((a,b)=>me.prog[keyOf(b)].at.localeCompare(me.prog[keyOf(a)].at));
+  $("resumeSec").hidden=!started.length||filter!=="all";
+  $("resume").innerHTML=started.map(card).join("");
+  const q=norm($("q").value.trim());
+  const newCut=Date.now()-14*86400e3;
+  let list=items.filter(it=>{
+    const k=keyOf(it);
+    if(filter==="fav"&&!isFav(k))return false;
+    if(srcFilter!=="all"&&it.p!==srcFilter)return false;
+    if(filter==="fr"&&(it.l||"fr")!=="fr")return false;
+    if(filter==="it"&&it.l!=="it")return false;
+    if(filter==="vlc"&&!it.file)return false;
+    if(filter==="film"&&it.k!=="film")return false;
+    if(filter==="serie"&&it.k!=="serie")return false;
+    if(filter==="suisse"&&!SWISS_P.has(it.p)&&!it.swiss)return false;
+    if(filter==="top"&&!(it.r>=7.5))return false;
+    if(filter==="new"&&!(it.added&&new Date(it.added).getTime()>=newCut))return false;
+    if(q&&!norm([it.t,it.d,it.g,it.y,P_LABEL[it.p]].join(" ")).includes(q))return false;
+    return true;
+  });
+  const sort=$("sort").value;
+  const cmpT=(a,b)=>String(a.t).localeCompare(String(b.t),"fr",{sensitivity:"base",ignorePunctuation:true});
+  const byR=(a,b)=>((b.r??-1)-(a.r??-1))||cmpT(a,b);
+  const byD=dir=>(a,b)=>{const x=mins(a),y=mins(b);if(x==null&&y==null)return cmpT(a,b);if(x==null)return 1;if(y==null)return -1;return dir*(x-y)||cmpT(a,b)};
+  const SORTS={short:byD(1),long:byD(-1),rating:byR,az:cmpT,genre:byR,year:(a,b)=>((b.y||0)-(a.y||0))||cmpT(a,b),old:(a,b)=>((a.y||9999)-(b.y||9999))||cmpT(a,b)};
+  list.sort(SORTS[sort]||byR);
+  $("gridTitle").textContent=FILTERS.find(f=>f[0]===filter)[1]+` · ${list.length} titre${list.length>1?"s":""}`;
+  let html;
+  if(sort==="genre"){
+    const groups={};
+    for(const it of list){const g=String(it.g||"Autres").split("·")[0].trim()||"Autres";(groups[g]=groups[g]||[]).push(it)}
+    html=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"fr")).map(g=>`<h3 class="ghead">${esc(g)}<small>${groups[g].length}</small></h3>`+groups[g].map(card).join("")).join("");
+  }else html=list.map(card).join("");
+  $("grid").innerHTML=list.length?html:`<div class="empty">${filter==="fav"?"Ouvre une fiche et touche « Ajouter aux favoris ».":items.length?"Aucun titre pour cette recherche.":"Le catalogue arrive… S'il reste vide, touche « Mettre à jour »."}</div>`;
+}
+function renderPlat(){
+  const v={rec:["rec","Recommandé"],lim:["lim","Limité"],no:["no","Inaccessible en Suisse"]};
+  $("plat").innerHTML=sources.length?sources.map(s=>{const [c,l]=v[s.verdict]||v.lim;return`<div class="pc"><div class="h"><b>${esc(s.n)}</b><span class="pill ${c}">${l}</span></div>
+    <div class="note">${esc(s.acces||"")}</div><div>${esc(s.resume||"")}</div>${s.vlc?`<div class="note">VLC : ${esc(s.vlc)}</div>`:""}${s.url?`<a href="${esc(s.url)}" target="_blank" rel="noopener">Ouvrir ${esc(s.n)} →</a>`:""}</div>`}).join(""):`<div class="empty">L'analyse arrive avec le catalogue.</div>`;
+}
+function renderLive(){
+  const q=norm($("q").value.trim());
+  const L=live.filter(c=>!q||norm([c.n,c.type,c.pays].join(" ")).includes(q));
+  const grp=[["fr","En français"],["it","In italiano"],["multi","Bouquets gratuits · des dizaines de chaînes FR et IT"]];
+  $("live").innerHTML=L.length?grp.map(([l,t])=>{const cs=L.filter(c=>c.l===l);return cs.length?`<h2>${t} · ${cs.length}</h2><div class="chgrid">${cs.map(c=>`
+    <div class="chan"><a class="chanmain" href="${esc(c.url)}" target="_blank" rel="noopener">
+      <span class="chlogo" style="${posterStyle({t:c.n,y:2000})}">${esc(c.n)}</span>
+      <span class="chmeta"><b>${esc(c.n)}</b><span class="note">${esc([c.type,c.pays].filter(Boolean).join(" · "))}</span>
+      ${c.dispoCH&&c.dispoCH!=="oui"?`<span class="note">${esc(c.dispoNote||"Certains programmes bloqués")}</span>`:""}${c.compte?`<span class="note">Compte gratuit requis</span>`:""}</span>
+      <span class="play">▶</span></a>
+      ${c.hls?`<div class="btns"><a class="btn" href="${esc(vlcLink(c.hls))}" data-copy="${esc(c.hls)}">Ouvrir dans VLC</a></div>`:""}</div>`).join("")}</div>`:""}).join(""):`<div class="empty">La liste des chaînes arrive.</div>`;
+  $("live").querySelectorAll("[data-copy]").forEach(a=>a.addEventListener("click",()=>copyText(a.dataset.copy)));
+}
+function renderLib(){
+  const v={oui:["rec","Ouvert aux Genevois"],"sous condition":["lim","Sous condition"],non:["no","Pas d'offre de films"]};
+  $("lib").innerHTML=libs.length?libs.map(l=>{const [c,t]=v[l.verdict]||v["sous condition"];return`<div class="pc"><div class="h"><b>${esc(l.n)}</b><span class="pill ${c}">${t}</span></div>
+    ${l.plateformes?.length?`<div class="note">${esc(l.plateformes.join(" · "))}</div>`:""}<div>${esc(l.offre||"")}</div>
+    <div class="note"><b>Qui :</b> ${esc(l.acces||"")}</div>${l.inscription?`<div class="note"><b>Inscription :</b> ${esc(l.inscription)}</div>`:""}
+    ${l.url?`<a href="${esc(l.url)}" target="_blank" rel="noopener">S'inscrire / voir l'offre →</a>`:""}</div>`}).join(""):`<div class="empty">La liste des bibliothèques arrive.</div>`;
+}
+function openSheet(k){
+  const it=items.find(x=>keyOf(x)===k); if(!it)return;
+  const pr=me.prog[k];
+  const main=it.file
+    ?`<a class="btn vlcb" id="playVlc" href="${esc(vlcLink(it.file))}">▶ Lancer dans VLC</a>
+      <div class="note">Le lien du film est copié automatiquement. Si VLC s'ouvre sans lancer le film : Réseau › Ouvrir un flux réseau › Coller.</div>
+      <div class="btns"><a class="btn" id="playWeb" href="${esc(it.file)}" target="_blank" rel="noopener">Lire sans VLC</a><button class="btn" id="copyLink">Copier le lien</button></div>`
+    :`<a class="btn main" id="playPlat" href="${esc(it.url||platSearch(it,it.p))}" target="_blank" rel="noopener">▶ ${it.url?"Regarder sur":"Chercher sur"} ${esc(P_LABEL[it.p]||it.p)}</a>`;
+  $("sheet").innerHTML=`<button class="close" id="closeSheet" aria-label="Fermer">×</button><div class="in">
+    <div class="poster" style="${posterStyle(it)}"><div class="pt">${esc(it.t)}</div><div class="py">${it.y||""}</div></div>
+    <div style="min-width:0"><h3>${esc(it.t)}</h3><div class="note">${it.y||""} · ${it.k==="serie"?"Série":"Film"} · ${esc(String(it.g||"").replace(/·/g," · "))}${it.dur?` · ${esc(it.dur)}`:""}</div>
+      ${it.d?`<div class="note">${esc(it.d)}</div>`:""}
+      ${it.r?`<div class="imdb" style="margin-top:8px;font-size:16px"><i>IMDb</i>≈ ${Number(it.r).toFixed(1)}/10</div>`:""}
+      <p class="desc">${esc(it.x||"")}</p>${it.exp?`<div class="note">Disponible jusqu'au ${esc(it.exp)}</div>`:""}${it.note?`<div class="note">${esc(it.note)}</div>`:""}</div>
+    <div class="row">${main}
+      ${!it.file?`<div class="note">Gratuit sur ${esc(P_LABEL[it.p]||it.p)}${["playsuisse","rts"].includes(it.p)?" (compte gratuit)":""}. L'app de la plateforme retient où tu t'es arrêté.</div>`:`<div class="note">VLC reprend automatiquement là où tu t'étais arrêté.</div>`}
+      <div class="btns"><button class="btn" id="favBtn">${isFav(k)?"★ Retirer des favoris":"☆ Ajouter aux favoris"}</button>
+      ${pr&&!pr.done?`<button class="btn" id="doneBtn">✓ Terminé</button>`:""}</div>
+    </div></div>`;
+  $("sheet").hidden=false; $("sheetBg").hidden=false;
+  $("closeSheet").onclick=closeSheet;
+  $("favBtn").onclick=()=>{toggleFav(k);openSheet(k)};
+  if($("doneBtn"))$("doneBtn").onclick=()=>{markDone(k);openSheet(k)};
+  for(const id of ["playWeb","playPlat"])if($(id))$(id).addEventListener("click",()=>markStarted(k));
+  if($("playVlc"))$("playVlc").addEventListener("click",()=>{copyText(it.file);markStarted(k)});
+  if($("copyLink"))$("copyLink").onclick=async()=>{markStarted(k);toast(await copyText(it.file)?"Lien copié. Dans VLC : Réseau › Ouvrir un flux réseau › Coller":"Copie impossible : maintiens le doigt sur « Lire sans VLC »")};
+}
+function closeSheet(){$("sheet").hidden=true;$("sheetBg").hidden=true}
+
+/* Update button : recharge le catalogue publié */
+async function requestUpdate(){
+  $("upd").disabled=true;$("upd").classList.add("spin");$("updLabel").textContent="Mise à jour…";
+  const before=catUpdated;
+  try{await loadCatalog(true);toast(catUpdated&&catUpdated!==before?"Nouveau catalogue chargé.":"Le catalogue est déjà à jour.")}
+  catch(e){toast("Pas de connexion : réessaie dans un moment.")}
+  $("upd").disabled=false;$("upd").classList.remove("spin");$("updLabel").textContent="Mettre à jour";
+  renderStatus();
+}
+
+/* Events */
+$("upd").onclick=requestUpdate;
+$("sheetBg").onclick=closeSheet;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSheet()});
+$("filters").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;filter=b.dataset.f;renderFilters();render()};
+document.addEventListener("click",e=>{const c=e.target.closest(".card");if(c)openSheet(c.dataset.k)});
+$("srcFilters").onclick=e=>{const b=e.target.closest(".chip");if(!b)return;srcFilter=b.dataset.s;render()};
+$("q").oninput=render;
+try{const s=localStorage.getItem("cl_sort");if(s)$("sort").value=s}catch(e){}
+$("sort").onchange=()=>{try{localStorage.setItem("cl_sort",$("sort").value)}catch(e){}render()};
+setInterval(renderStatus,60e3);
+renderFilters();render();
+
+/* Data : catalogue publié à côté de la page */
+async function loadCatalog(fresh){
+  const r=await fetch("catalog.json"+(fresh?"?t="+Date.now():""),{cache:fresh?"no-store":"default"});
+  if(!r.ok)throw new Error("http "+r.status);
+  const v=await r.json();
+  items=Array.isArray(v.items)?v.items:[]; sources=Array.isArray(v.sources)?v.sources:[]; libs=Array.isArray(v.libraries)?v.libraries:[]; live=Array.isArray(v.live)?v.live:[]; catUpdated=v.updatedAt||null;
+  status={}; render();
+}
+loadCatalog(false).catch(()=>{$("status").innerHTML=`<span class="dot err"></span>Impossible de charger le catalogue. Vérifie ta connexion, puis touche « Mettre à jour ».`});
+</script>
+
+</body>
+</html>
