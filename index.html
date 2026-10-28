@@ -74,6 +74,7 @@ h2{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.06e
 .poster .py{font-size:12px;color:rgb(255 255 255 / .8);margin-top:4px;letter-spacing:.08em}
 .poster .src{position:absolute;top:8px;left:8px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgb(0 0 0 / .55);color:#fff;padding:3px 7px;border-radius:4px}
 .poster .vlc{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:800;background:#ff8800;color:#000;padding:3px 6px;border-radius:4px}
+.poster .libb{background:#7dd3fc;color:#082f49}
 .poster .bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--amber)}
 .meta{display:flex;justify-content:space-between;gap:6px;font-size:13px;min-width:0}
 .meta .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
@@ -165,8 +166,8 @@ footer{color:var(--muted);font-size:12px;max-width:65ch}
 <div class="sheet" id="sheet" hidden role="dialog" aria-modal="true"></div>
 
 <script>
-const P_LABEL={archive:"Gratuit · VLC",playsuisse:"Play Suisse",rts:"RTS Play",rsi:"RSI Play",srf:"SRF Play",arte:"Arte",tv5:"TV5MONDEplus",pluto:"Pluto TV",rakuten:"Rakuten TV",youtube:"YouTube",memobase:"Memobase",francetv:"France.tv",henri:"Henri",onf:"ONF",raiplay:"RaiPlay",la7:"La7",mediaset:"Mediaset Infinity",lumni:"Lumni",auvio:"Auvio"};
-const FILTERS=[["all","Tout"],["live","TV en direct"],["fav","★ Favoris"],["fr","Français"],["it","Italiano"],["vlc","Direct VLC"],["film","Films"],["serie","Séries"],["suisse","Suisse"],["top","Mieux notés"],["new","Nouveautés"],["lib","Bibliothèques"],["plat","Plateformes"]];
+const P_LABEL={archive:"Gratuit · VLC",playsuisse:"Play Suisse",rts:"RTS Play",rsi:"RSI Play",srf:"SRF Play",arte:"Arte",tv5:"TV5MONDEplus",pluto:"Pluto TV",rakuten:"Rakuten TV",youtube:"YouTube",memobase:"Memobase",francetv:"France.tv",henri:"Henri",onf:"ONF",filmfriend:"filmfriend",mediatheque:"Médiathèque numérique",raiplay:"RaiPlay",la7:"La7",mediaset:"Mediaset Infinity",lumni:"Lumni",auvio:"Auvio"};
+const FILTERS=[["all","Tout"],["live","TV en direct"],["fav","★ Favoris"],["fr","Français"],["it","Italiano"],["vlc","Direct VLC"],["film","Films"],["serie","Séries"],["suisse","Suisse"],["top","Mieux notés"],["open","Sans inscription"],["new","Nouveautés"],["lib","Bibliothèques"],["plat","Plateformes"]];
 const SWISS_P=new Set(["playsuisse","rts","rsi","srf","memobase"]);
 
 let items=[], sources=[], libs=[], live=[], catUpdated=null, status={}, filter="all";
@@ -242,7 +243,7 @@ function mins(it){
 function card(it){
   const k=keyOf(it), pr=me.prog[k];
   return `<button class="card" data-k="${esc(k)}" aria-label="${esc(it.t)}">
-    <div class="poster" style="${posterStyle(it)}"><span class="src">${esc(P_LABEL[it.p]||it.p)}</span>${it.file?'<span class="vlc">VLC</span>':""}
+    <div class="poster" style="${posterStyle(it)}"><span class="src">${esc(P_LABEL[it.p]||it.p)}</span>${it.file?'<span class="vlc">VLC</span>':""}${it.lib?'<span class="vlc libb">Carte biblio</span>':""}
       <div class="pt">${esc(it.t)}</div><div class="py">${it.y||""} · ${it.k==="serie"?"SÉRIE":"FILM"}${isFav(k)?" · ★":""}</div>${pr&&!pr.done?'<span class="bar"></span>':""}</div>
     <div class="meta"><span class="t">${esc(it.t)}</span>${it.r?`<span class="imdb"><i>IMDb</i>${Number(it.r).toFixed(1)}</span>`:""}</div>
     <div class="sub">${it.dur?`<span class="dur">${esc(it.dur)}</span> · `:""}${esc(String(it.g||"").replace(/·/g," · "))}</div></button>`;
@@ -282,6 +283,7 @@ function render(){
     if(filter==="serie"&&it.k!=="serie")return false;
     if(filter==="suisse"&&!SWISS_P.has(it.p)&&!it.swiss)return false;
     if(filter==="top"&&!(it.r>=7.5))return false;
+    if(filter==="open"&&(it.lib||["playsuisse"].includes(it.p)))return false;
     if(filter==="new"&&!(it.added&&new Date(it.added).getTime()>=newCut))return false;
     if(q&&!norm([it.t,it.d,it.g,it.y,P_LABEL[it.p]].join(" ")).includes(q))return false;
     return true;
@@ -341,7 +343,7 @@ function openSheet(k){
       ${it.r?`<div class="imdb" style="margin-top:8px;font-size:16px"><i>IMDb</i>≈ ${Number(it.r).toFixed(1)}/10</div>`:""}
       <p class="desc">${esc(it.x||"")}</p>${it.exp?`<div class="note">Disponible jusqu'au ${esc(it.exp)}</div>`:""}${it.note?`<div class="note">${esc(it.note)}</div>`:""}</div>
     <div class="row">${main}
-      ${!it.file?`<div class="note">Gratuit sur ${esc(P_LABEL[it.p]||it.p)}${["playsuisse","rts"].includes(it.p)?" (compte gratuit)":""}. L'app de la plateforme retient où tu t'es arrêté.</div>`:`<div class="note">VLC reprend automatiquement là où tu t'étais arrêté.</div>`}
+      ${!it.file?`<div class="note">${it.lib?"Gratuit avec une carte de bibliothèque : voir l'onglet « Bibliothèques » pour t'inscrire.":"Gratuit sur "+esc(P_LABEL[it.p]||it.p)+(["playsuisse","rts"].includes(it.p)?" (compte gratuit)":"")+". L'app de la plateforme retient où tu t'es arrêté."}</div>`:`<div class="note">VLC reprend automatiquement là où tu t'étais arrêté.</div>`}
       <div class="btns"><button class="btn" id="favBtn">${isFav(k)?"★ Retirer des favoris":"☆ Ajouter aux favoris"}</button>
       ${pr&&!pr.done?`<button class="btn" id="doneBtn">✓ Terminé</button>`:""}</div>
     </div></div>`;
