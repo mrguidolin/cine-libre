@@ -75,6 +75,9 @@ h2{font-family:var(--display);font-weight:600;font-size:20px;letter-spacing:.06e
 .poster .src{position:absolute;top:8px;left:8px;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:rgb(0 0 0 / .55);color:#fff;padding:3px 7px;border-radius:4px}
 .poster .vlc{position:absolute;top:8px;right:8px;font-size:10.5px;font-weight:800;background:#ff8800;color:#000;padding:3px 6px;border-radius:4px}
 .poster .libb{background:#7dd3fc;color:#082f49}
+.poster .pimg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0}
+.poster.has-img .pt,.poster.has-img .py{display:none}
+.poster .src,.poster .vlc,.poster .bar{z-index:2}
 .poster .bar{position:absolute;left:0;right:0;bottom:0;height:4px;background:var(--amber)}
 .meta{display:flex;justify-content:space-between;gap:6px;font-size:13px;min-width:0}
 .meta .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:500}
@@ -159,7 +162,7 @@ footer{color:var(--muted);font-size:12px;max-width:65ch}
   <div class="plat" id="plat"></div>
 </section>
 
-<footer id="foot">Uniquement des titres gratuits et légaux. Badge <b style="color:#ff8800">VLC</b> : le film s'ouvre directement dans VLC, qui reprend là où tu t'étais arrêté. Les autres s'ouvrent dans l'app de la plateforme (compte gratuit pour Play Suisse et RTS Play). Les notes IMDb sont indicatives.</footer>
+<footer id="foot">Uniquement des titres gratuits et légaux. Badge <b style="color:#ff8800">VLC</b> : le film s'ouvre directement dans VLC, qui reprend là où tu t'étais arrêté. Les autres s'ouvrent dans l'app de la plateforme (compte gratuit pour Play Suisse et RTS Play). Les notes IMDb sont indicatives. Affiches : Wikipédia, Internet Archive, RSI et RTS.</footer>
 </div>
 
 <div class="sheetBg" id="sheetBg" hidden></div>
@@ -240,10 +243,66 @@ function mins(it){
   const h=d.match(/(\d+)\s*h\s*(\d+)?/); if(h)return (+h[1])*60+(+(h[2]||0));
   const m=d.match(/(\d+)\s*min/); return m?+m[1]:null;
 }
+/* Affiches : Internet Archive, RSI/RTS, sinon Wikipédia (fr, it, en). Mises en cache dans le téléphone. */
+function dayFr(ts){if(!ts)return"—";try{return new Date(ts).toLocaleDateString("fr-CH",{day:"numeric",month:"long"})}catch(e){return ts.slice(0,10)}}
+let PC={};try{PC=JSON.parse(localStorage.getItem("cl_posters")||"{}")}catch(e){}
+let pcSave=null;function savePC(){clearTimeout(pcSave);pcSave=setTimeout(()=>{try{localStorage.setItem("cl_posters",JSON.stringify(PC))}catch(e){}},800)}
+const posterUrl=k=>{const v=PC[k];return v&&v.u?v.u:null};
+const posterImg=k=>{const u=posterUrl(k);return u?`<img class="pimg" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-img');this.remove()">`:""};
+function origTitle(it){const m=String(it.x||"").match(/Titre original\s*:\s*([^.(]+)/i);return m?m[1].trim():null}
+async function wikiPoster(it){
+  const langs=it.l==="it"?["it","en","fr"]:["fr","en","it"];
+  const names=[...new Set([origTitle(it),it.t.replace(/\s*[–-]\s*(Ép\.|Ep\.|ép\.).*$/,"").replace(/\s*\(.*?\)\s*$/,"")].filter(Boolean))];
+  const kind=it.k==="serie"?{fr:"série",it:"serie",en:"series"}:{fr:"film",it:"film",en:"film"};
+  for(const name of names)for(const lg of langs){
+    const q=`${name} ${it.y||""} ${kind[lg]}`;
+    const u=`https://${lg}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrlimit=4&gsrsearch=${enc(q)}&prop=pageimages|description&piprop=thumbnail&pithumbsize=500`;
+    let j;try{const r=await fetch(u);if(!r.ok)continue;j=await r.json()}catch(e){continue}
+    const pages=Object.values(j?.query?.pages||{}).sort((a,b)=>(a.index||0)-(b.index||0));
+    const nt=norm(name).replace(/[^a-z0-9]/g,"");
+    for(const pg of pages){
+      if(!pg.thumbnail?.source)continue;
+      const d=norm(pg.description||""), ti=norm(pg.title||"").replace(/[^a-z0-9]/g,"");
+      const yearOk=!it.y||[it.y-1,it.y,it.y+1].some(y=>d.includes(String(y))||norm(pg.title).includes(String(y)));
+      const titleOk=nt.length<4?ti.startsWith(nt):ti.includes(nt.slice(0,Math.min(nt.length,14)));
+      const isWork=/film|serie|series|court|documentaire|documentario|movie|feuilleton|telefilm|animation|animazione/.test(d);
+      if(yearOk&&titleOk&&isWork&&!/\.svg/i.test(pg.thumbnail.source))return pg.thumbnail.source;
+    }
+  }
+  return null;
+}
+async function srgPoster(it){
+  const m=String(it.url||"").match(/urn=(urn:(rsi|rts|srf):video:[\w-]+)/);if(!m)return null;
+  try{const r=await fetch(`https://il.srgssr.ch/integrationlayer/2.0/mediaComposition/byUrn/${m[1]}.json`);if(!r.ok)return null;
+    const j=await r.json();const c=(j.chapterList||[])[0];const img=c?.imageUrl||j.show?.imageUrl;return img?img+"/scale/width/500":null}catch(e){return null}
+}
+async function findPoster(it){
+  const am=it.p==="archive"&&String(it.url||"").match(/archive\.org\/details\/([^/?#]+)/);
+  if(am)return `https://archive.org/services/img/${am[1]}`;
+  if(it.p==="rsi"||it.p==="rts"){const s=await srgPoster(it);if(s)return s}
+  return await wikiPoster(it);
+}
+const pQueue=[];let pActive=0;const pQueued=new Set();
+function pumpPosters(){
+  while(pActive<3&&pQueue.length){
+    const k=pQueue.shift();const it=items.find(x=>keyOf(x)===k);if(!it){pQueued.delete(k);continue}
+    pActive++;
+    findPoster(it).then(u=>{PC[k]={u:u||"",t:Date.now()};savePC();if(u)document.querySelectorAll(`.poster[data-pk="${CSS.escape(k)}"]`).forEach(el=>{if(el.querySelector(".pimg"))return;el.insertAdjacentHTML("afterbegin",posterImg(k));el.classList.add("has-img")})})
+      .finally(()=>{pActive--;pQueued.delete(k);pumpPosters()});
+  }
+}
+function wantPoster(k){const v=PC[k];if(v&&(v.u||Date.now()-v.t<14*86400e3))return;if(pQueued.has(k))return;pQueued.add(k);pQueue.push(k);pumpPosters()}
+let pObs=null;
+function watchPosters(){
+  if(!("IntersectionObserver" in window)){document.querySelectorAll(".poster[data-pk]").forEach(el=>wantPoster(el.dataset.pk));return}
+  if(!pObs)pObs=new IntersectionObserver(es=>{for(const e of es)if(e.isIntersecting){pObs.unobserve(e.target);wantPoster(e.target.dataset.pk)}},{rootMargin:"600px"});
+  document.querySelectorAll(".poster[data-pk]:not(.has-img)").forEach(el=>pObs.observe(el));
+}
+
 function card(it){
   const k=keyOf(it), pr=me.prog[k];
   return `<button class="card" data-k="${esc(k)}" aria-label="${esc(it.t)}">
-    <div class="poster" style="${posterStyle(it)}"><span class="src">${esc(P_LABEL[it.p]||it.p)}</span>${it.file?'<span class="vlc">VLC</span>':""}${it.lib?'<span class="vlc libb">Carte biblio</span>':""}
+    <div class="poster${posterUrl(k)?" has-img":""}" data-pk="${esc(k)}" style="${posterStyle(it)}">${posterImg(k)}<span class="src">${esc(P_LABEL[it.p]||it.p)}</span>${it.file?'<span class="vlc">VLC</span>':""}${it.lib?'<span class="vlc libb">Carte biblio</span>':""}
       <div class="pt">${esc(it.t)}</div><div class="py">${it.y||""} · ${it.k==="serie"?"SÉRIE":"FILM"}${isFav(k)?" · ★":""}</div>${pr&&!pr.done?'<span class="bar"></span>':""}</div>
     <div class="meta"><span class="t">${esc(it.t)}</span>${it.r?`<span class="imdb"><i>IMDb</i>${Number(it.r).toFixed(1)}</span>`:""}</div>
     <div class="sub">${it.dur?`<span class="dur">${esc(it.dur)}</span> · `:""}${esc(String(it.g||"").replace(/·/g," · "))}</div></button>`;
@@ -256,7 +315,7 @@ function renderStatus(){
   if(!items.length&&!catUpdated){s.innerHTML=`<span class="dot run"></span>Chargement du catalogue…`;return}
   if(running){s.innerHTML=`<span class="dot run"></span>Recherche des nouveautés en cours (10–20 min). Le catalogue se rafraîchira tout seul.`;return}
   if(status.state==="error"){s.innerHTML=`<span class="dot err"></span>Dernière mise à jour échouée : ${esc(status.message||"")} · ${items.length} titres`;return}
-  s.innerHTML=`<span class="dot"></span>${items.length} titres gratuits · mis à jour ${ago(catUpdated)}${status.message?` · ${esc(status.message)}`:""}`;
+  s.innerHTML=`<span class="dot"></span>${items.length} titres gratuits · catalogue du ${dayFr(catUpdated)}${status.message?` · ${esc(status.message)}`:""}`;
 }
 function render(){
   renderStatus();
@@ -301,6 +360,7 @@ function render(){
     for(const it of list){const g=String(it.g||"Autres").split("·")[0].trim()||"Autres";(groups[g]=groups[g]||[]).push(it)}
     html=Object.keys(groups).sort((a,b)=>a.localeCompare(b,"fr")).map(g=>`<h3 class="ghead">${esc(g)}<small>${groups[g].length}</small></h3>`+groups[g].map(card).join("")).join("");
   }else html=list.map(card).join("");
+  setTimeout(watchPosters,0);
   $("grid").innerHTML=list.length?html:`<div class="empty">${filter==="fav"?"Ouvre une fiche et touche « Ajouter aux favoris ».":items.length?"Aucun titre pour cette recherche.":"Le catalogue arrive… S'il reste vide, touche « Mettre à jour »."}</div>`;
 }
 function renderPlat(){
@@ -337,7 +397,7 @@ function openSheet(k){
       <div class="btns"><a class="btn" id="playWeb" href="${esc(it.file)}" target="_blank" rel="noopener">Lire sans VLC</a><button class="btn" id="copyLink">Copier le lien</button></div>`
     :`<a class="btn main" id="playPlat" href="${esc(it.url||platSearch(it,it.p))}" target="_blank" rel="noopener">▶ ${it.url?"Regarder sur":"Chercher sur"} ${esc(P_LABEL[it.p]||it.p)}</a>`;
   $("sheet").innerHTML=`<button class="close" id="closeSheet" aria-label="Fermer">×</button><div class="in">
-    <div class="poster" style="${posterStyle(it)}"><div class="pt">${esc(it.t)}</div><div class="py">${it.y||""}</div></div>
+    <div class="poster${posterUrl(k)?" has-img":""}" data-pk="${esc(k)}" style="${posterStyle(it)}">${posterImg(k)}<div class="pt">${esc(it.t)}</div><div class="py">${it.y||""}</div></div>
     <div style="min-width:0"><h3>${esc(it.t)}</h3><div class="note">${it.y||""} · ${it.k==="serie"?"Série":"Film"} · ${esc(String(it.g||"").replace(/·/g," · "))}${it.dur?` · ${esc(it.dur)}`:""}</div>
       ${it.d?`<div class="note">${esc(it.d)}</div>`:""}
       ${it.r?`<div class="imdb" style="margin-top:8px;font-size:16px"><i>IMDb</i>≈ ${Number(it.r).toFixed(1)}/10</div>`:""}
@@ -347,7 +407,7 @@ function openSheet(k){
       <div class="btns"><button class="btn" id="favBtn">${isFav(k)?"★ Retirer des favoris":"☆ Ajouter aux favoris"}</button>
       ${pr&&!pr.done?`<button class="btn" id="doneBtn">✓ Terminé</button>`:""}</div>
     </div></div>`;
-  $("sheet").hidden=false; $("sheetBg").hidden=false;
+  $("sheet").hidden=false; $("sheetBg").hidden=false; watchPosters();
   $("closeSheet").onclick=closeSheet;
   $("favBtn").onclick=()=>{toggleFav(k);openSheet(k)};
   if($("doneBtn"))$("doneBtn").onclick=()=>{markDone(k);openSheet(k)};
@@ -361,7 +421,7 @@ function closeSheet(){$("sheet").hidden=true;$("sheetBg").hidden=true}
 async function requestUpdate(){
   $("upd").disabled=true;$("upd").classList.add("spin");$("updLabel").textContent="Mise à jour…";
   const before=catUpdated;
-  try{await loadCatalog(true);toast(catUpdated&&catUpdated!==before?"Nouveau catalogue chargé.":"Le catalogue est déjà à jour.")}
+  try{await loadCatalog(true);toast(catUpdated&&catUpdated!==before?`Nouveau catalogue chargé : ${items.length} titres.`:`Tu as déjà la dernière version (${dayFr(catUpdated)}). Les titres expirés sont retirés chaque nuit ; pour des nouveautés, demande à Claude.`)}
   catch(e){toast("Pas de connexion : réessaie dans un moment.")}
   $("upd").disabled=false;$("upd").classList.remove("spin");$("updLabel").textContent="Mettre à jour";
   renderStatus();
@@ -382,7 +442,7 @@ renderFilters();render();
 
 /* Data : catalogue publié à côté de la page */
 async function loadCatalog(fresh){
-  const r=await fetch("catalog.json"+(fresh?"?t="+Date.now():""),{cache:fresh?"no-store":"default"});
+  const r=await fetch("catalog.json?t="+Date.now(),{cache:"no-store"});
   if(!r.ok)throw new Error("http "+r.status);
   const v=await r.json();
   items=Array.isArray(v.items)?v.items:[]; sources=Array.isArray(v.sources)?v.sources:[]; libs=Array.isArray(v.libraries)?v.libraries:[]; live=Array.isArray(v.live)?v.live:[]; catUpdated=v.updatedAt||null;
