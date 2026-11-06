@@ -245,29 +245,33 @@ function mins(it){
 }
 /* Affiches : Internet Archive, RSI/RTS, sinon Wikipédia (fr, it, en). Mises en cache dans le téléphone. */
 function dayFr(ts){if(!ts)return"—";try{return new Date(ts).toLocaleDateString("fr-CH",{day:"numeric",month:"long"})}catch(e){return ts.slice(0,10)}}
-let PC={};try{PC=JSON.parse(localStorage.getItem("cl_posters")||"{}")}catch(e){}
-let pcSave=null;function savePC(){clearTimeout(pcSave);pcSave=setTimeout(()=>{try{localStorage.setItem("cl_posters",JSON.stringify(PC))}catch(e){}},800)}
+let PC={};try{PC=JSON.parse(localStorage.getItem("cl_posters2")||"{}")}catch(e){}
+let pcSave=null;function savePC(){clearTimeout(pcSave);pcSave=setTimeout(()=>{try{localStorage.setItem("cl_posters2",JSON.stringify(PC))}catch(e){}},800)}
 const posterUrl=k=>{const v=PC[k];return v&&v.u?v.u:null};
 const posterImg=k=>{const u=posterUrl(k);return u?`<img class="pimg" src="${esc(u)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.parentNode.classList.remove('has-img');this.remove()">`:""};
 function origTitle(it){const m=String(it.x||"").match(/Titre original\s*:\s*([^.(]+)/i);return m?m[1].trim():null}
 async function wikiPoster(it){
   const langs=it.l==="it"?["it","en","fr"]:["fr","en","it"];
-  const names=[...new Set([origTitle(it),it.t.replace(/\s*[–-]\s*(Ép\.|Ep\.|ép\.).*$/,"").replace(/\s*\(.*?\)\s*$/,"")].filter(Boolean))];
+  const clean=t=>t.replace(/\s*[–-]\s*(Ép\.|Ep\.|ép\.).*$/i,"").replace(/\s*\(.*?\)\s*$/,"").trim();
+  const names=[...new Set([clean(it.t),origTitle(it)].filter(Boolean))];
   const kind=it.k==="serie"?{fr:"série",it:"serie",en:"series"}:{fr:"film",it:"film",en:"film"};
-  for(const name of names)for(const lg of langs){
-    const q=`${name} ${it.y||""} ${kind[lg]}`;
-    const u=`https://${lg}.wikipedia.org/w/api.php?action=query&format=json&origin=*&generator=search&gsrlimit=4&gsrsearch=${enc(q)}&prop=pageimages|description&piprop=thumbnail&pithumbsize=500`;
+  const nn=t=>norm(t).replace(/\(.*?\)/g,"").replace(/[^a-z0-9]/g,"");
+  const years=it.y?[it.y-1,it.y,it.y+1].map(String):[];
+  for(const name of names){const nt=nn(name);if(!nt)continue;
+   for(const lg of langs)for(const withYear of (it.y?[true,false]:[false])){
+    const q=`${name}${withYear?" "+it.y:""} ${kind[lg]}`;
+    const u=`https://${lg}.wikipedia.org/w/api.php?action=query&format=json&origin=*&redirects=1&generator=search&gsrlimit=5&gsrsearch=${enc(q)}&prop=pageimages|description|extracts&piprop=thumbnail|original&pithumbsize=500&pilicense=any&exintro=1&explaintext=1&exsentences=2&exlimit=5`;
     let j;try{const r=await fetch(u);if(!r.ok)continue;j=await r.json()}catch(e){continue}
-    const pages=Object.values(j?.query?.pages||{}).sort((a,b)=>(a.index||0)-(b.index||0));
-    const nt=norm(name).replace(/[^a-z0-9]/g,"");
+    const pages=Object.values(j?.query?.pages||{}).sort((x,y)=>(x.index||0)-(y.index||0));
     for(const pg of pages){
-      if(!pg.thumbnail?.source)continue;
-      const d=norm(pg.description||""), ti=norm(pg.title||"").replace(/[^a-z0-9]/g,"");
-      const yearOk=!it.y||[it.y-1,it.y,it.y+1].some(y=>d.includes(String(y))||norm(pg.title).includes(String(y)));
-      const titleOk=nt.length<4?ti.startsWith(nt):ti.includes(nt.slice(0,Math.min(nt.length,14)));
-      const isWork=/film|serie|series|court|documentaire|documentario|movie|feuilleton|telefilm|animation|animazione/.test(d);
-      if(yearOk&&titleOk&&isWork&&!/\.svg/i.test(pg.thumbnail.source))return pg.thumbnail.source;
+      const img=pg.thumbnail?.source||pg.original?.source; if(!img||/\.svg/i.test(img)||/logo|flag|signature/i.test(img))continue;
+      const ti=nn(pg.title||""); const txt=norm((pg.description||"")+" "+(pg.extract||"")+" "+(pg.title||""));
+      const titleOk=ti===nt||ti.startsWith(nt)||(nt.length>=6&&nt.startsWith(ti)&&ti.length>=5);
+      const yearOk=!years.length||years.some(y=>txt.includes(y));
+      const isWork=/film|serie|series|court|documentaire|documentario|movie|feuilleton|telefilm|animation|animazione|miniserie|sitcom|cortometraggio|lungometraggio/.test(txt);
+      if(titleOk&&yearOk&&isWork)return img;
     }
+   }
   }
   return null;
 }
@@ -284,7 +288,7 @@ async function findPoster(it){
 }
 const pQueue=[];let pActive=0;const pQueued=new Set();
 function pumpPosters(){
-  while(pActive<3&&pQueue.length){
+  while(pActive<4&&pQueue.length){
     const k=pQueue.shift();const it=items.find(x=>keyOf(x)===k);if(!it){pQueued.delete(k);continue}
     pActive++;
     findPoster(it).then(u=>{PC[k]={u:u||"",t:Date.now()};savePC();if(u)document.querySelectorAll(`.poster[data-pk="${CSS.escape(k)}"]`).forEach(el=>{if(el.querySelector(".pimg"))return;el.insertAdjacentHTML("afterbegin",posterImg(k));el.classList.add("has-img")})})
